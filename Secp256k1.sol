@@ -1,4 +1,4 @@
-pragma solidity ^0.4.3;
+pragma solidity >=0.5.0 <0.7.0;
 
 /**
  * @title ECCMath
@@ -13,15 +13,18 @@ library ECCMath {
     /// @param a The number.
     /// @param p The mmodulus.
     /// @return x such that ax = 1 (mod p)
-    function invmod(uint a, uint p) internal constant returns (uint) {
+    function invmod(uint a, uint p) internal pure returns (uint) {
         if (a == 0 || a == p || p == 0)
-            throw;
-        if (a > p)
-            a = a % p;
+            revert('ECCMath::invmod');
+        
+        uint _a = a;
+        if (_a > p)
+            _a = _a % p;
+
         int t1;
         int t2 = 1;
         uint r1 = p;
-        uint r2 = a;
+        uint r2 = _a;
         uint q;
         while (r2 != 0) {
             q = r1 / r2;
@@ -39,26 +42,24 @@ library ECCMath {
     /// @param e The exponent.
     /// @param m The modulus.
     /// @return x such that x = b**e (mod m)
-    function expmod(uint b, uint e, uint m) internal constant returns (uint r) {
+    function expmod(uint b, uint e, uint m) internal pure returns (uint r) {
         if (b == 0)
             return 0;
         if (e == 0)
             return 1;
         if (m == 0)
-            throw;
+            revert('ECCMath::expmod');
         r = 1;
         uint bit = 2 ** 255;
-        bit = bit;
+        //bit = bit;
         assembly {
-            loop:
-                jumpi(end, iszero(bit))
+            for { } gt(bit, 0) { } {
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, bit)))), m)
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, div(bit, 2))))), m)
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, div(bit, 4))))), m)
                 r := mulmod(mulmod(r, r, m), exp(b, iszero(iszero(and(e, div(bit, 8))))), m)
                 bit := div(bit, 16)
-                jump(loop)
-            end:
+            }
         }
     }
 
@@ -69,7 +70,7 @@ library ECCMath {
     /// @param z2Inv The square of zInv
     /// @param prime The prime modulus.
     /// @return (Px", Py", 1)
-    function toZ1(uint[3] memory P, uint zInv, uint z2Inv, uint prime) internal constant {
+    function toZ1(uint[3] memory P, uint zInv, uint z2Inv, uint prime) internal pure {
         P[0] = mulmod(P[0], z2Inv, prime);
         P[1] = mulmod(P[1], mulmod(zInv, z2Inv, prime), prime);
         P[2] = 1;
@@ -80,7 +81,7 @@ library ECCMath {
     /// @param PJ The point.
     /// @param prime The prime modulus.
     /// @return (Px", Py", 1)
-    function toZ1(uint[3] PJ, uint prime) internal constant {
+    function toZ1(uint[3] memory PJ, uint prime) internal pure {
         uint zInv = invmod(PJ[2], prime);
         uint zInv2 = mulmod(zInv, zInv, prime);
         PJ[0] = mulmod(PJ[0], zInv2, prime);
@@ -110,12 +111,8 @@ library Secp256k1 {
     // Maximum value of s
     uint constant lowSmax = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
-    // For later
-    // uint constant lambda = "0x5363ad4cc05c30e0a5261c028812645a122e22ea20816678df02967c1b23bd72";
-    // uint constant beta = "0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee";
-
     /// @dev See Curve.onCurve
-    function onCurve(uint[2] P) internal constant returns (bool) {
+    function onCurve(uint[2] memory P) internal pure returns (bool) {
         uint p = pp;
         if (0 == P[0] || P[0] == p || 0 == P[1] || P[1] == p)
             return false;
@@ -125,13 +122,13 @@ library Secp256k1 {
     }
 
     /// @dev See Curve.isPubKey
-    function isPubKey(uint[2] memory P) internal constant returns (bool isPK) {
+    function isPubKey(uint[2] memory P) internal pure returns (bool isPK) {
         isPK = onCurve(P);
     }
 
     /// @dev See Curve.isPubKey
     // TODO: We assume we are given affine co-ordinates for now
-    function isPubKey(uint[3] memory P) internal constant returns (bool isPK) {
+    function isPubKey(uint[3] memory P) internal pure returns (bool isPK) {
         uint[2] memory a_P;
         a_P[0] = P[0];
         a_P[1] = P[1];
@@ -139,7 +136,7 @@ library Secp256k1 {
     }
 
     /// @dev See Curve.validateSignature
-    function validateSignature(bytes32 message, uint[2] rs, uint[2] Q) internal constant returns (bool) {
+    function validateSignature(bytes32 message, uint[2] memory rs, uint[2] memory Q) internal pure returns (bool) {
         uint n = nn;
         uint p = pp;
         if(rs[0] == 0 || rs[0] >= n || rs[1] == 0 || rs[1] > lowSmax)
@@ -161,16 +158,16 @@ library Secp256k1 {
     }
 
     /// @dev See Curve.compress
-    function compress(uint[2] P) internal constant returns (uint8 yBit, uint x) {
+    function compress(uint[2] memory P) internal pure returns (uint8 yBit, uint x) {
         x = P[0];
         yBit = P[1] & 1 == 1 ? 1 : 0;
     }
 
     /// @dev See Curve.decompress
-    function decompress(uint8 yBit, uint x) internal constant returns (uint[2] P) {
+    function decompress(uint8 yBit, uint x) internal pure returns (uint[2] memory P) {
         uint p = pp;
-        var y2 = addmod(mulmod(x, mulmod(x, x, p), p), 7, p);
-        var y_ = ECCMath.expmod(y2, (p + 1) / 4, p);
+        uint256 y2 = addmod(mulmod(x, mulmod(x, x, p), p), 7, p);
+        uint256 y_ = ECCMath.expmod(y2, (p + 1) / 4, p);
         uint cmp = yBit ^ y_ & 1;
         P[0] = x;
         P[1] = (cmp == 0) ? y_ : p - y_;
@@ -179,7 +176,7 @@ library Secp256k1 {
     // Point addition, P + Q
     // inData: Px, Py, Pz, Qx, Qy, Qz
     // outData: Rx, Ry, Rz
-    function _add(uint[3] memory P, uint[3] memory Q) internal constant returns (uint[3] memory R) {
+    function _add(uint[3] memory P, uint[3] memory Q) internal pure returns (uint[3] memory R) {
         if(P[2] == 0)
             return Q;
         if(Q[2] == 0)
@@ -218,7 +215,7 @@ library Secp256k1 {
     // Point addition, P + Q. P Jacobian, Q affine.
     // inData: Px, Py, Pz, Qx, Qy
     // outData: Rx, Ry, Rz
-    function _addMixed(uint[3] memory P, uint[2] memory Q) internal constant returns (uint[3] memory R) {
+    function _addMixed(uint[3] memory P, uint[2] memory Q) internal pure returns (uint[3] memory R) {
         if(P[2] == 0)
             return [Q[0], Q[1], 1];
         if(Q[1] == 0)
@@ -258,7 +255,7 @@ library Secp256k1 {
     }
 
     // Same as addMixed but params are different and mutates P.
-    function _addMixedM(uint[3] memory P, uint[2] memory Q) internal constant {
+    function _addMixedM(uint[3] memory P, uint[2] memory Q) internal pure {
         if(P[1] == 0) {
             P[0] = Q[0];
             P[1] = Q[1];
@@ -304,7 +301,7 @@ library Secp256k1 {
     // Point doubling, 2*P
     // Params: Px, Py, Pz
     // Not concerned about the 1 extra mulmod.
-    function _double(uint[3] memory P) internal constant returns (uint[3] memory Q) {
+    function _double(uint[3] memory P) internal pure returns (uint[3] memory Q) {
         uint p = pp;
         if (P[2] == 0)
             return;
@@ -313,14 +310,14 @@ library Secp256k1 {
         uint Py2 = mulmod(Py, Py, p);
         uint s = mulmod(4, mulmod(Px, Py2, p), p);
         uint m = mulmod(3, mulmod(Px, Px, p), p);
-        var Qx = addmod(mulmod(m, m, p), p - addmod(s, s, p), p);
+        uint256 Qx = addmod(mulmod(m, m, p), p - addmod(s, s, p), p);
         Q[0] = Qx;
         Q[1] = addmod(mulmod(m, addmod(s, p - Qx, p), p), p - mulmod(8, mulmod(Py2, Py2, p), p), p);
         Q[2] = mulmod(2, mulmod(Py, P[2], p), p);
     }
 
     // Same as double but mutates P and is internal only.
-    function _doubleM(uint[3] memory P) internal constant {
+    function _doubleM(uint[3] memory P) internal pure {
         uint p = pp;
         if (P[2] == 0)
             return;
@@ -329,7 +326,7 @@ library Secp256k1 {
         uint Py2 = mulmod(Py, Py, p);
         uint s = mulmod(4, mulmod(Px, Py2, p), p);
         uint m = mulmod(3, mulmod(Px, Px, p), p);
-        var PxTemp = addmod(mulmod(m, m, p), p - addmod(s, s, p), p);
+        uint256 PxTemp = addmod(mulmod(m, m, p), p - addmod(s, s, p), p);
         P[0] = PxTemp;
         P[1] = addmod(mulmod(m, addmod(s, p - PxTemp, p), p), p - mulmod(8, mulmod(Py2, Py2, p), p), p);
         P[2] = mulmod(2, mulmod(Py, P[2], p), p);
@@ -338,7 +335,7 @@ library Secp256k1 {
     // Multiplication dP. P affine, wNAF: w=5
     // Params: d, Px, Py
     // Output: Jacobian Q
-    function _mul(uint d, uint[2] memory P) internal constant returns (uint[3] memory Q) {
+    function _mul(uint d, uint[2] memory P) internal pure returns (uint[3] memory Q) {
         uint p = pp;
         if (d == 0) // TODO
             return;
@@ -348,28 +345,27 @@ library Secp256k1 {
         // wNAF
         assembly
         {
-                let dm := 0
-                dwPtr := mload(0x40)
-                mstore(0x40, add(dwPtr, 512)) // Should lower this.
-            loop:
-                jumpi(loop_end, iszero(d))
-                jumpi(even, iszero(and(d, 1)))
-                dm := mod(d, 32)
-                mstore8(add(dwPtr, i), dm) // Don"t store as signed - convert when reading.
-                d := add(sub(d, dm), mul(gt(dm, 16), 32))
-            even:
-                d := div(d, 2)
-                i := add(i, 1)
-                jump(loop)
-            loop_end:
+            let dm := 0
+            dwPtr := mload(0x40)
+            mstore(0x40, add(dwPtr, 512)) // Should lower this.
+            for { }  not(iszero(d)) { } {
+                switch iszero(and(d, 1))
+                case 0 {
+                    d := div(d, 2)
+                    i := add(i, 1)
+                }
+                default {
+                    dm := mod(d, 32)
+                    mstore8(add(dwPtr, i), dm) // Don"t store as signed - convert when reading.
+                    d := add(sub(d, dm), mul(gt(dm, 16), 32))
+                }
+            }
         }
-        
-        dwPtr = dwPtr;
 
         // Pre calculation
         uint[3][8] memory PREC; // P, 3P, 5P, 7P, 9P, 11P, 13P, 15P
         PREC[0] = [P[0], P[1], 1];
-        var X = _double(PREC[0]);
+        uint[3] memory X = _double(PREC[0]);
         PREC[1] = _addMixed(X, P);
         PREC[2] = _add(X, PREC[1]);
         PREC[3] = _add(X, PREC[2]);
@@ -396,7 +392,7 @@ library Secp256k1 {
             INV[8 + k] = mulmod(INV[k - 2], INV[8], p);
         }
         INV[9] = mulmod(PREC[2][2], INV[8], p);         // z1Inv
-        for(k = 0; k < 7; k++) {
+        for(uint k = 0; k < 7; k++) {
             ECCMath.toZ1(PREC[k + 1], INV[k + 9], mulmod(INV[k + 9], INV[k + 9], p), p);
         }
 
@@ -419,5 +415,4 @@ library Secp256k1 {
             }
         }
     }
-
 }

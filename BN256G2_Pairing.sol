@@ -6,6 +6,7 @@
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 pragma solidity ^0.5.0;
+
 library Pairing {
     struct G1Point {
         uint X;
@@ -17,11 +18,11 @@ library Pairing {
         uint[2] Y;
     }
     /// @return the generator of G1
-    function P1() pure internal returns (G1Point memory) {
+    function P1() internal pure returns (G1Point memory) {
         return G1Point(1, 2);
     }
     /// @return the generator of G2
-    function P2() pure internal returns (G2Point memory) {
+    function P2() internal pure returns (G2Point memory) {
         return G2Point(
             [11559732032986387107991004021392285783925812861821192530917403151452391805634,
              10857046999023057135944570762232829481370756359578518086990519993285655852781],
@@ -30,7 +31,7 @@ library Pairing {
         );
     }
     /// @return the negation of p, i.e. p.addition(p.negate()) should be zero.
-    function negate(G1Point memory p) pure internal returns (G1Point memory) {
+    function negate(G1Point memory p) internal pure returns (G1Point memory) {
         // The prime q in the base field F_q for G1
         uint q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
         if (p.X == 0 && p.Y == 0)
@@ -50,7 +51,7 @@ library Pairing {
             // Use "invalid" to make gas estimation work
             switch success case 0 { invalid() }
         }
-        require(success);
+        require(success, '');
     }
     /// @return the sum of two points of G2
     function addition(G2Point memory p1, G2Point memory p2) internal pure returns (G2Point memory r) {
@@ -69,14 +70,14 @@ library Pairing {
             // Use "invalid" to make gas estimation work
             switch success case 0 { invalid() }
         }
-        require (success);
+        require (success, '');
     }
     /// @return the result of computing the pairing check
     /// e(p1[0], p2[0]) *  .... * e(p1[n], p2[n]) == 1
     /// For example pairing([P1(), P1().negate()], [P2(), P2()]) should
     /// return true.
     function pairing(G1Point[] memory p1, G2Point[] memory p2) internal returns (bool) {
-        require(p1.length == p2.length);
+        require(p1.length == p2.length, '');
         uint elements = p1.length;
         uint inputSize = elements * 6;
         uint[] memory input = new uint[](inputSize);
@@ -96,7 +97,7 @@ library Pairing {
             // Use "invalid" to make gas estimation work
             switch success case 0 { invalid() }
         }
-        require(success);
+        require(success, '');
         return out[0] != 0;
     }
     /// Convenience method for a pairing check for two pairs.
