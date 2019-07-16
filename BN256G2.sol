@@ -105,13 +105,19 @@ library BN256G2 {
      */
     function ECTwistMul(
         uint256 s,
-        uint256 pt1xx, uint256 pt1xy,
-        uint256 pt1yx, uint256 pt1yy
+        uint256 _pt1xx, uint256 _pt1xy,
+        uint256 _pt1yx, uint256 _pt1yy
     ) public view returns (
         uint256, uint256,
         uint256, uint256
     ) {
         uint256 pt1zx = 1;
+
+        uint256 pt1xx = _pt1xx;
+        uint256 pt1xy = _pt1xy;
+        uint256 pt1yx = _pt1yx;
+        uint256 pt1yy = _pt1yy;
+
         if (
             pt1xx == 0 && pt1xy == 0 &&
             pt1yx == 0 && pt1yy == 0
@@ -237,7 +243,7 @@ library BN256G2 {
             success := staticcall(sub(gas, 2000), 5, freemem, 0xC0, freemem, 0x20)
             result := mload(freemem)
         }
-        require(success);
+        require(success, 'Pairing::_modInv');
     }
 
     function _fromJacobian(
@@ -261,74 +267,75 @@ library BN256G2 {
         uint256 pt1zx, uint256 pt1zy,
         uint256 pt2xx, uint256 pt2xy,
         uint256 pt2yx, uint256 pt2yy,
-        uint256 pt2zx, uint256 pt2zy) internal pure returns (uint256[6] memory pt3) {
-            if (pt1zx == 0 && pt1zy == 0) {
-                (
-                    pt3[PTXX], pt3[PTXY],
-                    pt3[PTYX], pt3[PTYY],
-                    pt3[PTZX], pt3[PTZY]
-                ) = (
-                    pt2xx, pt2xy,
-                    pt2yx, pt2yy,
-                    pt2zx, pt2zy
-                );
-                return pt3;
-            } else if (pt2zx == 0 && pt2zy == 0) {
-                (
-                    pt3[PTXX], pt3[PTXY],
-                    pt3[PTYX], pt3[PTYY],
-                    pt3[PTZX], pt3[PTZY]
-                ) = (
-                    pt1xx, pt1xy,
-                    pt1yx, pt1yy,
-                    pt1zx, pt1zy
-                );
-                return pt3;
-            }
+        uint256 pt2zx, uint256 pt2zy
+    ) internal pure returns (uint256[6] memory pt3) {
+        if (pt1zx == 0 && pt1zy == 0) {
+            (
+                pt3[PTXX], pt3[PTXY],
+                pt3[PTYX], pt3[PTYY],
+                pt3[PTZX], pt3[PTZY]
+            ) = (
+                pt2xx, pt2xy,
+                pt2yx, pt2yy,
+                pt2zx, pt2zy
+            );
+            return pt3;
+        } else if (pt2zx == 0 && pt2zy == 0) {
+            (
+                pt3[PTXX], pt3[PTXY],
+                pt3[PTYX], pt3[PTYY],
+                pt3[PTZX], pt3[PTZY]
+            ) = (
+                pt1xx, pt1xy,
+                pt1yx, pt1yy,
+                pt1zx, pt1zy
+            );
+            return pt3;
+        }
 
-            (pt2yx,     pt2yy)     = _FQ2Mul(pt2yx, pt2yy, pt1zx, pt1zy); // U1 = y2 * z1
-            (pt3[PTYX], pt3[PTYY]) = _FQ2Mul(pt1yx, pt1yy, pt2zx, pt2zy); // U2 = y1 * z2
-            (pt2xx,     pt2xy)     = _FQ2Mul(pt2xx, pt2xy, pt1zx, pt1zy); // V1 = x2 * z1
-            (pt3[PTZX], pt3[PTZY]) = _FQ2Mul(pt1xx, pt1xy, pt2zx, pt2zy); // V2 = x1 * z2
+        (pt2yx,     pt2yy)     = _FQ2Mul(pt2yx, pt2yy, pt1zx, pt1zy); // U1 = y2 * z1
+        (pt3[PTYX], pt3[PTYY]) = _FQ2Mul(pt1yx, pt1yy, pt2zx, pt2zy); // U2 = y1 * z2
+        (pt2xx,     pt2xy)     = _FQ2Mul(pt2xx, pt2xy, pt1zx, pt1zy); // V1 = x2 * z1
+        (pt3[PTZX], pt3[PTZY]) = _FQ2Mul(pt1xx, pt1xy, pt2zx, pt2zy); // V2 = x1 * z2
 
-            if (pt2xx == pt3[PTZX] && pt2xy == pt3[PTZY]) {
-                if (pt2yx == pt3[PTYX] && pt2yy == pt3[PTYY]) {
-                    (
-                        pt3[PTXX], pt3[PTXY],
-                        pt3[PTYX], pt3[PTYY],
-                        pt3[PTZX], pt3[PTZY]
-                    ) = _ECTwistDoubleJacobian(pt1xx, pt1xy, pt1yx, pt1yy, pt1zx, pt1zy);
-                    return pt3;
-                }
+        if (pt2xx == pt3[PTZX] && pt2xy == pt3[PTZY]) {
+            if (pt2yx == pt3[PTYX] && pt2yy == pt3[PTYY]) {
                 (
                     pt3[PTXX], pt3[PTXY],
                     pt3[PTYX], pt3[PTYY],
                     pt3[PTZX], pt3[PTZY]
-                ) = (
-                    1, 0,
-                    1, 0,
-                    0, 0
-                );
+                ) = _ECTwistDoubleJacobian(pt1xx, pt1xy, pt1yx, pt1yy, pt1zx, pt1zy);
                 return pt3;
             }
+            (
+                pt3[PTXX], pt3[PTXY],
+                pt3[PTYX], pt3[PTYY],
+                pt3[PTZX], pt3[PTZY]
+            ) = (
+                1, 0,
+                1, 0,
+                0, 0
+            );
+            return pt3;
+        }
 
-            (pt2zx,     pt2zy)     = _FQ2Mul(pt1zx, pt1zy, pt2zx,     pt2zy);     // W = z1 * z2
-            (pt1xx,     pt1xy)     = _FQ2Sub(pt2yx, pt2yy, pt3[PTYX], pt3[PTYY]); // U = U1 - U2
-            (pt1yx,     pt1yy)     = _FQ2Sub(pt2xx, pt2xy, pt3[PTZX], pt3[PTZY]); // V = V1 - V2
-            (pt1zx,     pt1zy)     = _FQ2Mul(pt1yx, pt1yy, pt1yx,     pt1yy);     // V_squared = V * V
-            (pt2yx,     pt2yy)     = _FQ2Mul(pt1zx, pt1zy, pt3[PTZX], pt3[PTZY]); // V_squared_times_V2 = V_squared * V2
-            (pt1zx,     pt1zy)     = _FQ2Mul(pt1zx, pt1zy, pt1yx,     pt1yy);     // V_cubed = V * V_squared
-            (pt3[PTZX], pt3[PTZY]) = _FQ2Mul(pt1zx, pt1zy, pt2zx,     pt2zy);     // newz = V_cubed * W
-            (pt2xx,     pt2xy)     = _FQ2Mul(pt1xx, pt1xy, pt1xx,     pt1xy);     // U * U
-            (pt2xx,     pt2xy)     = _FQ2Mul(pt2xx, pt2xy, pt2zx,     pt2zy);     // U * U * W
-            (pt2xx,     pt2xy)     = _FQ2Sub(pt2xx, pt2xy, pt1zx,     pt1zy);     // U * U * W - V_cubed
-            (pt2zx,     pt2zy)     = _FQ2Muc(pt2yx, pt2yy, 2);                    // 2 * V_squared_times_V2
-            (pt2xx,     pt2xy)     = _FQ2Sub(pt2xx, pt2xy, pt2zx,     pt2zy);     // A = U * U * W - V_cubed - 2 * V_squared_times_V2
-            (pt3[PTXX], pt3[PTXY]) = _FQ2Mul(pt1yx, pt1yy, pt2xx,     pt2xy);     // newx = V * A
-            (pt1yx,     pt1yy)     = _FQ2Sub(pt2yx, pt2yy, pt2xx,     pt2xy);     // V_squared_times_V2 - A
-            (pt1yx,     pt1yy)     = _FQ2Mul(pt1xx, pt1xy, pt1yx,     pt1yy);     // U * (V_squared_times_V2 - A)
-            (pt1xx,     pt1xy)     = _FQ2Mul(pt1zx, pt1zy, pt3[PTYX], pt3[PTYY]); // V_cubed * U2
-            (pt3[PTYX], pt3[PTYY]) = _FQ2Sub(pt1yx, pt1yy, pt1xx,     pt1xy);     // newy = U * (V_squared_times_V2 - A) - V_cubed * U2
+        (pt2zx,     pt2zy)     = _FQ2Mul(pt1zx, pt1zy, pt2zx,     pt2zy);     // W = z1 * z2
+        (pt1xx,     pt1xy)     = _FQ2Sub(pt2yx, pt2yy, pt3[PTYX], pt3[PTYY]); // U = U1 - U2
+        (pt1yx,     pt1yy)     = _FQ2Sub(pt2xx, pt2xy, pt3[PTZX], pt3[PTZY]); // V = V1 - V2
+        (pt1zx,     pt1zy)     = _FQ2Mul(pt1yx, pt1yy, pt1yx,     pt1yy);     // V_squared = V * V
+        (pt2yx,     pt2yy)     = _FQ2Mul(pt1zx, pt1zy, pt3[PTZX], pt3[PTZY]); // V_squared_times_V2 = V_squared * V2
+        (pt1zx,     pt1zy)     = _FQ2Mul(pt1zx, pt1zy, pt1yx,     pt1yy);     // V_cubed = V * V_squared
+        (pt3[PTZX], pt3[PTZY]) = _FQ2Mul(pt1zx, pt1zy, pt2zx,     pt2zy);     // newz = V_cubed * W
+        (pt2xx,     pt2xy)     = _FQ2Mul(pt1xx, pt1xy, pt1xx,     pt1xy);     // U * U
+        (pt2xx,     pt2xy)     = _FQ2Mul(pt2xx, pt2xy, pt2zx,     pt2zy);     // U * U * W
+        (pt2xx,     pt2xy)     = _FQ2Sub(pt2xx, pt2xy, pt1zx,     pt1zy);     // U * U * W - V_cubed
+        (pt2zx,     pt2zy)     = _FQ2Muc(pt2yx, pt2yy, 2);                    // 2 * V_squared_times_V2
+        (pt2xx,     pt2xy)     = _FQ2Sub(pt2xx, pt2xy, pt2zx,     pt2zy);     // A = U * U * W - V_cubed - 2 * V_squared_times_V2
+        (pt3[PTXX], pt3[PTXY]) = _FQ2Mul(pt1yx, pt1yy, pt2xx,     pt2xy);     // newx = V * A
+        (pt1yx,     pt1yy)     = _FQ2Sub(pt2yx, pt2yy, pt2xx,     pt2xy);     // V_squared_times_V2 - A
+        (pt1yx,     pt1yy)     = _FQ2Mul(pt1xx, pt1xy, pt1yx,     pt1yy);     // U * (V_squared_times_V2 - A)
+        (pt1xx,     pt1xy)     = _FQ2Mul(pt1zx, pt1zy, pt3[PTYX], pt3[PTYY]); // V_cubed * U2
+        (pt3[PTYX], pt3[PTYY]) = _FQ2Sub(pt1yx, pt1yy, pt1xx,     pt1xy);     // newy = U * (V_squared_times_V2 - A) - V_cubed * U2
     }
 
     function _ECTwistDoubleJacobian(
@@ -363,11 +370,19 @@ library BN256G2 {
     }
 
     function _ECTwistMulJacobian(
-        uint256 d,
-        uint256 pt1xx, uint256 pt1xy,
-        uint256 pt1yx, uint256 pt1yy,
-        uint256 pt1zx, uint256 pt1zy
+        uint256 _d,
+        uint256 _pt1xx, uint256 _pt1xy,
+        uint256 _pt1yx, uint256 _pt1yy,
+        uint256 _pt1zx, uint256 _pt1zy
     ) internal pure returns (uint256[6] memory pt2) {
+        uint256 d = _d;
+        uint256 pt1xx = _pt1xx;
+        uint256 pt1xy = _pt1xy;
+        uint256 pt1yx = _pt1yx;
+        uint256 pt1yy = _pt1yy;
+        uint256 pt1zx = _pt1zx;
+        uint256 pt1zy = _pt1zy;
+
         while (d != 0) {
             if ((d & 1) != 0) {
                 pt2 = _ECTwistAddJacobian(

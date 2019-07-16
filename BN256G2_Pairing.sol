@@ -5,7 +5,9 @@
 // The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-pragma solidity ^0.5.0;
+pragma solidity >=0.5.0;
+
+import "./BN256G2.sol";
 
 library Pairing {
     struct G1Point {
@@ -51,10 +53,10 @@ library Pairing {
             // Use "invalid" to make gas estimation work
             switch success case 0 { invalid() }
         }
-        require(success, '');
+        require(success, 'Pairing::addition');
     }
     /// @return the sum of two points of G2
-    function addition(G2Point memory p1, G2Point memory p2) internal pure returns (G2Point memory r) {
+    function addition(G2Point memory p1, G2Point memory p2) internal view returns (G2Point memory r) {
         (r.X[1], r.X[0], r.Y[1], r.Y[0]) = BN256G2.ECTwistAdd(p1.X[1],p1.X[0],p1.Y[1],p1.Y[0],p2.X[1],p2.X[0],p2.Y[1],p2.Y[0]);
     }
     /// @return the product of a point on G1 and a scalar, i.e.
@@ -77,7 +79,7 @@ library Pairing {
     /// For example pairing([P1(), P1().negate()], [P2(), P2()]) should
     /// return true.
     function pairing(G1Point[] memory p1, G2Point[] memory p2) internal returns (bool) {
-        require(p1.length == p2.length, '');
+        require(p1.length == p2.length, 'Pairing::pairing');
         uint elements = p1.length;
         uint inputSize = elements * 6;
         uint[] memory input = new uint[](inputSize);
@@ -97,7 +99,7 @@ library Pairing {
             // Use "invalid" to make gas estimation work
             switch success case 0 { invalid() }
         }
-        require(success, '');
+        require(success, 'Pairing::pairing');
         return out[0] != 0;
     }
     /// Convenience method for a pairing check for two pairs.
