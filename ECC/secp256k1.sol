@@ -195,7 +195,7 @@ library Secp256k1 {
         ]; // Pu, Ps, Qu, Qs
         if (us[0] == us[2]) {
             if (us[1] != us[3])
-                return;
+                return R;
             else {
                 return _double(P);
             }
@@ -235,11 +235,11 @@ library Secp256k1 {
                 P[0] = 0;
                 P[1] = 0;
                 P[2] = 0;
-                return;
+                return R;
             }
             else {
                 _double(P);
-                return;
+                return R;
             }
         }
         uint h = addmod(us[2], p - us[0], p);
@@ -304,7 +304,7 @@ library Secp256k1 {
     function _double(uint[3] memory P) internal pure returns (uint[3] memory Q) {
         uint p = pp;
         if (P[2] == 0)
-            return;
+            return Q;
         uint Px = P[0];
         uint Py = P[1];
         uint Py2 = mulmod(Py, Py, p);
@@ -338,7 +338,7 @@ library Secp256k1 {
     function _mul(uint d, uint[2] memory P) internal pure returns (uint[3] memory Q) {
         uint p = pp;
         if (d == 0) // TODO
-            return;
+            return Q;
         uint dwPtr; // points to array of NAF coefficients.
         uint i;
 

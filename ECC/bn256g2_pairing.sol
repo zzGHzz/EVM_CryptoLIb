@@ -7,7 +7,7 @@
 
 pragma solidity >=0.5.0;
 
-import "./BN256G2.sol";
+import "./bn256g2.sol";
 
 library Pairing {
     struct G1Point {
