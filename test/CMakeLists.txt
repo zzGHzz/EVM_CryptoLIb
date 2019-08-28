@@ -8,8 +8,9 @@ find_package (openssl REQUIRED)
 include_directories(include)
 
 add_executable(Demo
+        include/point.h
         include/secp256k1.h
         secp256k1.cpp
         main.cpp)
 
-target_link_libraries (test OpenSSL::SSL)
+target_link_libraries (Demo OpenSSL::SSL)
