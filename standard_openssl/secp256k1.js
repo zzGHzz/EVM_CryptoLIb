@@ -6,18 +6,9 @@ contract("Secp256k1", accounts => {
     it("should G be on curve", () => {
         let G = [Gx, Gy];
         return Secp256k1.deployed()
-            .then(instance => instance.onCurve.call(G))
+            .then(instance => instance.onCurve(G))
             .then(check => {
                 assert.equal(check.valueOf(), 1, "G is not on the curve");
-            });
+            })
     });
-});
-
-contract("Secp256k1", accounts => {
-    it("compress validation", () => {
-        let G = [Gx, Gy]
-        return Secp256k1.deployed()
-            .then(instance => instance.compress.call(G))
-            .then(instance => instance.)
-    }
 });
