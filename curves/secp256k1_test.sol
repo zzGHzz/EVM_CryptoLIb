@@ -2,6 +2,30 @@ pragma solidity >=0.5.0 <0.7.0;
 
 contract ECCPoint {
     uint256[3] data;
+    uint256 p;
+    
+    constructor(uint256 _p, uint256[2] memory _data) public {
+        data[0] = _data[0];
+        data[1] = _data[1];
+        data[2] = 1;
+        p = _p;
+    }
+    
+    function simplify() public view returns (bool ret) {
+        ECCMath.toZ1(data, p);
+        ret = true;
+    }
+    
+    function is_infinity() public view returns (bool ret) {
+        if (data[2] == 0) ret = true;
+        else ret = false;
+    }
+    
+    function get_compressed() public view returns (uint8 yBit, uint x) {
+        simplify();
+        x = data[0];
+        yBit = data[1] & 1 == 1 ? 1 : 0;
+    }
 }
 
 contract test {
